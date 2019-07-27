@@ -19,6 +19,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 
 @Controller
@@ -49,7 +50,7 @@ public class UserController {
     @PostMapping("/signup")
     public ModelAndView registration(@ModelAttribute("user") User user,
                                      HttpServletResponse response,
-                                     Model model) {
+                                     Model model) throws IOException {
 
         User userFind = userService.findByEmail(user.getEmail());
         if (userFind != null) {
@@ -62,10 +63,8 @@ public class UserController {
 
         addCookie(response, registeredUser, token);
 
-        model.addAttribute("token", token);
-        model.addAttribute("user", registeredUser);
-
-        return new ModelAndView("welcome");
+        response.sendRedirect("/home");
+        return new ModelAndView();
     }
 
 
@@ -79,7 +78,7 @@ public class UserController {
     @PostMapping("/login")
     public ModelAndView authentication(@ModelAttribute("user") User user,
                                        HttpServletResponse response,
-                                       Model model) {
+                                       Model model) throws IOException {
         try {
             String userEmail = user.getEmail();
             authenticationManager.authenticate(
@@ -97,10 +96,9 @@ public class UserController {
             String token = jwtTokenProvider.createToken(userEmail);
 
             addCookie(response, userFind, token);
-            model.addAttribute("token", token);
-            model.addAttribute("user", userFind);
 
-            return new ModelAndView("welcome");
+            response.sendRedirect("/home");
+            return new ModelAndView();
         } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid email or password");
         }
@@ -114,7 +112,7 @@ public class UserController {
 
     @PostMapping("/update")
     public ModelAndView update(@ModelAttribute("user") User user,
-                           HttpServletResponse response) {
+                           HttpServletResponse response) throws IOException {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserEmail = auth.getName();
@@ -132,18 +130,19 @@ public class UserController {
             userService.setPassword(currentUserEmail, user.getPassword());
         }
 
-        return new ModelAndView("welcome");
+        response.sendRedirect("/home");
+        return new ModelAndView();
     }
 
     @GetMapping("/delete")
-    public String delete() {
+    public String delete( ) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserEmail = auth.getName();
         userService.deleteToStatus(currentUserEmail);
         SecurityContextHolder.clearContext();
-        return "login";
 
+        return "login";
     }
 
     @GetMapping("/settings")
@@ -159,7 +158,8 @@ public class UserController {
     }
 
     @PostMapping("/restore")
-    public ModelAndView restore(@ModelAttribute("user") User user) {
+    public ModelAndView restore(@ModelAttribute("user") User user,
+                                HttpServletResponse response) throws IOException {
 
         User userFind = userService.findByEmail(user.getEmail());
 
@@ -174,7 +174,8 @@ public class UserController {
             userService.restoreToStatus(userFind);
         }
 
-        return  new ModelAndView("login");
+        response.sendRedirect("/home");
+        return new ModelAndView();
     }
 
 
